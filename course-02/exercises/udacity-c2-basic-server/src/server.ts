@@ -2,6 +2,7 @@ import express, { Router, Request, Response } from 'express';
 import bodyParser from 'body-parser';
 
 import { Car, cars as cars_list } from './cars';
+import { type } from 'os';
 
 (async () => {
   let cars:Car[]  = cars_list;
@@ -68,6 +69,55 @@ import { Car, cars as cars_list } from './cars';
                 .send(`Welcome to the Cloud, ${name}!`);
   } );
 
+app.get( "/cars/", ( req: Request, res: Response ) => {
+    let { make } = req.query; //deconstruct our query prameters
+
+    let cars_list = cars;
+
+    //optional query filter
+    if (make) {
+      cars_list = cars.filter((car) => car.make === make);
+    }
+
+    //return success
+    res.status(200).send(cars_list);
+})
+
+app.get( "/cars/:id", (req: Request, res: Response ) => {
+  //destruct our path params
+  let { id } = req.params;
+
+  //check if id is set
+  if (!id) {
+    return res.status(400).send('id is required');
+  }
+
+  const car = cars.filter((car) => car.id == id);
+
+  if(car && car.length === 0) {
+    return res.status(404).send('car is not found');
+  }
+
+  res.status(200).send(car);
+})
+
+app.post("/cars/", (req: Request, res: Response) => {
+
+  let { make, type, model, cost, id } = req.body;
+
+  if (!id || !type || !model || !cost) {
+    return res.status(400)
+              .send('make, type, model, cost, id are required');
+  }
+
+  const new_car: Car = {
+    make: make, type: type, model: model, cost: cost, id: id
+  };
+
+  cars_list.push(new_car);
+
+  res.status(201).send(new_car);
+})
   // @TODO Add an endpoint to GET a list of cars
   // it should be filterable by make with a query paramater
 

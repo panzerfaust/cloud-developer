@@ -1,0 +1,19 @@
+export const config = {
+  "dev": {
+    "username": "udagramklazdev2", //process.env.POSTGRESS_USERNAME
+    "password": "rzY)S3H)%zn4gU-S", //process.env.POSTGRESS_PASSWORD
+    "database": "udagramklazdev2", //process.env.POSTGRESS_DATABASE
+    "host": "udagramklazdev2.ceet8facd36c.eu-west-1.rds.amazonaws.com", //process.env.POSTGRESS_HOST
+    "dialect": "postgres",
+    "aws_region": "eu-west-1",
+    "aws_profile": "default",
+    "aws_media_bucket": "udagram-klaz-dev2"
+  },
+  "prod": {
+    "username": "",
+    "password": "",
+    "database": "udagram_prod",
+    "host": "",``
+    "dialect": "postgres"
+  }
+}
