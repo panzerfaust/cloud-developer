@@ -28,12 +28,14 @@ async function comparePasswords(plainTextPassword: string, hash: string): Promis
 
 function generateJWT(user: User): string {
     //@TODO Use jwt to create a new JWT Payload containing
-    return jwt.sign(user, config.jwt.secret);
+    //return jwt.sign(user, config.jwt.secret);
+    return jwt.sign(JSON.stringify(user), config.jwt.secret);
     //return "";
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
     //return next();
+    console.log(req.headers);
      if (!req.headers || !req.headers.authorization){
          return res.status(401).send({ message: 'No authorization headers.' });
      }
@@ -75,6 +77,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const user = await User.findByPk(email);
     // check that user exists
+    console.log(user);
     if(!user) {
         return res.status(401).send({ auth: false, message: 'Unauthorized' });
     }
