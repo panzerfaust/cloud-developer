@@ -50,9 +50,10 @@ export async function deleteTodoItem (id: string, jwtToken: string)
   await todoDL.deleteTodoItem(id, userId)
 }
 
-//Allow for images to be uploaded to S3 and URL stored in table
-// export async function generateUploadUrl (id: string, jwtToken: string)
-// {
-//   const userId = parseUserId(jwtToken)
-//   await todoDL.generateUploadUrl(id, userId) 
-// }
+// Code not doing anything yet as function doing all the work
+export async function generateUploadUrl(todoId: string, attachmentUrl: string, jwtToken: string): Promise<void> {
+  const userId = parseUserId(jwtToken);
+  const todo = await todoDL.getTodoItem(todoId, userId)
+
+  todoDL.generateUploadUrl(todo.todoId, todo.createdAt, attachmentUrl)
+}
