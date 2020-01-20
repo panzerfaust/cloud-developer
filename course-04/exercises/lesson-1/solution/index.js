@@ -28,7 +28,7 @@ exports.handler = async (event) => {
   await cloudwatch.putMetricData({
     MetricData: [
       {
-        MetricName: 'Success',
+        MetricName: 'ServiceName',
         Dimensions: [
           {
             Name: 'ServiceName',
