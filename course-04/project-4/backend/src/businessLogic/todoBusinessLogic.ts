@@ -55,5 +55,5 @@ export async function generateUploadUrl(todoId: string, attachmentUrl: string, j
   const userId = parseUserId(jwtToken);
   const todo = await todoDL.getTodoItem(todoId, userId)
 
-  todoDL.generateUploadUrl(todo.todoId, todo.createdAt, attachmentUrl)
+  todoDL.generateUploadUrl(todo.todoId, todo.userId, attachmentUrl)
 }
