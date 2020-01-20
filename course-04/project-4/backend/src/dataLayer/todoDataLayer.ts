@@ -1,23 +1,36 @@
 import * as AWS  from 'aws-sdk'
 import * as AWSXRay from 'aws-xray-sdk'
-const XAWS = AWSXRay.captureAWS(AWS)
-const s3 = new XAWS.S3({signatureVersion: 'v4'})
-import {DeleteObjectOutput} from 'aws-sdk/clients/s3'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { TodoItem } from '../models/TodoItems'
 import { TodoUpdate } from '../models/TodoUpdate'
 import { createLogger } from '../utils/logger'
+//const s3 = new XAWS.S3({signatureVersion: 'v4'})
 
 const logger = createLogger('todo')
+const XAWS = AWSXRay.captureAWS(AWS)
+
+//For testing DynamoDB instance locally when there is no connection to the server
+function createDynamoDBClient() {
+  if (process.env.IS_OFFLINE) {
+    console.log('Creating a local DynamoDB instance')
+    return new XAWS.DynamoDB.DocumentClient({
+      region: 'localhost',
+      endpoint: 'http://localhost:8000'
+    })
+  }
+  return new XAWS.DynamoDB.DocumentClient()
+}
 
 export class TodoDataLayer {
-
   //set initial class object values
   constructor(
     private readonly docClient: DocumentClient = createDynamoDBClient(),
-    private readonly todoTable = process.env.TODO_TABLE) {}
+    private readonly todoTable = process.env.TODO_TABLE //,
+    //private readonly bucketName    = process.env.TODO_S3_BUCKET,
+    //private readonly urlExpiration = process.env.SIGNED_URL_EXPIRATION
+    ) {}
 
-  async getTodoList(userId: string): Promise<TodoItem[]> 
+  public async getTodoList(userId: string): Promise<TodoItem[]> 
   {
     logger.info('Getting all TODO items for current user')
     const result = 
@@ -35,7 +48,7 @@ export class TodoDataLayer {
     return items as TodoItem[]
   }
 
-  async createTodoItem(todo: TodoItem): Promise<TodoItem> {
+  public async createTodoItem(todo: TodoItem): Promise<TodoItem> {
     logger.info('Creating TODO item for current user')
     await this.docClient.put({
       TableName: this.todoTable,
@@ -45,7 +58,7 @@ export class TodoDataLayer {
     return todo
   }
 
-  async updateTodoItem (
+  public async updateTodoItem (
     todo: TodoUpdate,
     todoId: string,
     userId: string)
@@ -75,11 +88,11 @@ export class TodoDataLayer {
           ':dd': todo.dueDate,
           ':d': todo.done,
         },
-        ReturnValues:"UPDATED_NEW"
+        ReturnValues: 'UPDATED_NEW'
       }).promise()
   }
   
-  async updateTodoItemAttachment (
+  public async updateTodoItemAttachment (
     attachmentUrl: string,
     todoId: string,
     userId: string)
@@ -105,7 +118,7 @@ export class TodoDataLayer {
   }
 
   //Fetches entries from DDB table
-  async getTodoItem (todoId: string, userId: string) : Promise <TodoItem>
+  public async getTodoItem (todoId: string, userId: string) : Promise <TodoItem>
   {
     logger.info('Fetching TODO item for current user')
     const pull = await this.docClient
@@ -123,7 +136,7 @@ export class TodoDataLayer {
   }
 
   //Delete entry from DDB Table
-  async deleteTodoItem (todoId: string, userId: string)
+  public async deleteTodoItem (todoId: string, userId: string)
   {
     logger.info('Deleting TODO item for current user')
 
@@ -138,47 +151,24 @@ export class TodoDataLayer {
       }).promise()
   }
 
-  //Delete the attached image from s3 bucket
-  async deleteTodoItemAttachment (todoId: string): Promise<DeleteObjectOutput>
-  {
-    logger.info('Deleting TODO item image URL for current user')
-    return await s3.deleteObject(
-      {
-        Bucket: this.todoTable, 
-        Key: todoId
-      }).promise()
+  // Code not doing anything yet as function doing all the work
+  public async generateUploadUrl(todoId: string, userId: string, attachmentUrl: string): Promise<void> {
+    this.docClient
+        .update({
+            TableName: this.todoTable,
+            Key: 
+            {
+              "userId": userId,
+              "todoId": todoId
+            },
+            UpdateExpression: 'uploadUrl = :uploadUrl',
+            ExpressionAttributeValues: 
+            {
+                ':attachmentUrl': attachmentUrl,
+            },
+            ReturnValues: 'Updated'
+        })
+        .promise();
   }
-
-  //  async generateUploadUrl (todoId: string, userId: string)
-  // {
-  //   logger.info('Creating TODO item image URL for current user')
-  //   const bucketName    = process.env.TODO_S3_BUCKET
-  //   const urlExpiration = process.env.SIGNED_URL_EXPIRATION
-  //   const url : string = getUploadUrl(todoId, userId)
-
-  //   this.updateTodoItemAttachment(
-  //     `https://${bucketName}.s3.amazonaws.com/${todoId}`,
-  //     todoId,
-  //     userId)
-      
-  //   // retrieve signed URL and return it
-  //   return s3.getSignedUrl('putObject', {
-  //     Bucket: bucketName,
-  //     Key: todoId,
-  //     Expires: urlExpiration
-  //   })
-  // }
-
 }
 
-//For testing DynamoDB instance locally when there is no connection to the server
-function createDynamoDBClient() {
-  if (process.env.IS_OFFLINE) {
-    console.log('Creating a local DynamoDB instance')
-    return new XAWS.DynamoDB.DocumentClient({
-      region: 'localhost',
-      endpoint: 'http://localhost:8000'
-    })
-  }
-  return new XAWS.DynamoDB.DocumentClient()
-}
