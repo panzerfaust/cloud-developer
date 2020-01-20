@@ -9,8 +9,19 @@ import { createLogger } from '../utils/logger'
 const logger = createLogger('todo')
 const XAWS = AWSXRay.captureAWS(AWS)
 
-export class TodoDataLayer {
+//For testing DynamoDB instance locally when there is no connection to the server
+function createDynamoDBClient() {
+  if (process.env.IS_OFFLINE) {
+    console.log('Creating a local DynamoDB instance')
+    return new XAWS.DynamoDB.DocumentClient({
+      region: 'localhost',
+      endpoint: 'http://localhost:8000'
+    })
+  }
+  return new XAWS.DynamoDB.DocumentClient()
+}
 
+export class TodoDataLayer {
   //set initial class object values
   constructor(
     private readonly docClient: DocumentClient = createDynamoDBClient(),
@@ -161,14 +172,3 @@ export class TodoDataLayer {
   }
 }
 
-//For testing DynamoDB instance locally when there is no connection to the server
-function createDynamoDBClient() {
-  if (process.env.IS_OFFLINE) {
-    console.log('Creating a local DynamoDB instance')
-    return new XAWS.DynamoDB.DocumentClient({
-      region: 'localhost',
-      endpoint: 'http://localhost:8000'
-    })
-  }
-  return new XAWS.DynamoDB.DocumentClient()
-}
