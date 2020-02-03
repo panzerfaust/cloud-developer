@@ -5,13 +5,14 @@ plugins:
   - serverless-webpack
   - serverless-reqvalidator-plugin
   - serverless-aws-documentation
-  - serverless-plugin-canary-deployments
   - serverless-iam-roles-per-function
   - serverless-dynamodb-local
   - serverless-offline
+  - serverless-plugin-canary-deployments # enables codeploy versioning
 
-#package:
-  #individually: true
+# packages functions individually to decrease lambda size and therefore lower compute time
+package:
+  individually: true
 
 provider:
   name: aws
@@ -32,31 +33,13 @@ provider:
     PARTITION_KEY: userId #search by user
     SORT_KEY: todoId #search by item
     INDEX_KEY: dueDate
-
-  # iamRoleStatements:
-  #   - Effect: Allow
-  #     Action:
-  #       - codedeploy:*
-  #     Resource:
-  #       - '*'
-  #   - Effect: Allow
-  #     Action:
-  #       - dynamodb:Query
-  #       - dynamodb:PutItem
-  #       - dynamodb:GetItem
-  #     Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}
-  #   - Effect: Allow
-  #     Action:
-  #       - s3:PutObject
-  #       - s3:GetObject
-  #     Resource: arn:aws:s3:::${self:provider.environment.TODO_S3_BUCKET}/*
   
 functions:
 
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
-  # TODO: Configure this function
+# pulls TODOs list from DynamoDB table
   GetTodos:
     handler: src/lambda/http/getTodos.handler
     events:
@@ -69,6 +52,9 @@ functions:
           documentation:
             summary: Create a new entry
             description: Create a new entry
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
     iamRoleStatements:
       - Effect: "Allow"
         Action:
@@ -80,8 +66,13 @@ functions:
         Action:
           - dynamodb:Query
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
 
-  # TODO: Configure this function
+# creates TODOs item for DynamoDB table
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
     events:
@@ -96,6 +87,9 @@ functions:
             description: Create a new entry
             requestModels:
               'application/json': CreateTodoRequest
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
     iamRoleStatements:
       - Effect: "Allow"
         Action:
@@ -107,8 +101,13 @@ functions:
         Action:
           - dynamodb:PutItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}
-
-  # TODO: Configure this function
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
+        
+# updates DynamoDB table items with 'done'
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
     events:
@@ -123,6 +122,9 @@ functions:
             description: Create a new entry
             requestModels:
               'application/json': UpdateTodoRequest
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
     iamRoleStatements:
       - Effect: "Allow"
         Action:
@@ -134,8 +136,13 @@ functions:
         Action:
           - dynamodb:UpdateItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
 
-  # TODO: Configure this function
+# deletes TODO items for DynamoDB table
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
     events:
@@ -148,6 +155,9 @@ functions:
           documentation:
             summary: Deletes an entry
             description: Deletes an entry
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
     iamRoleStatements:
       - Effect: "Allow"
         Action:
@@ -163,8 +173,13 @@ functions:
         Action:
           - s3:DeleteObject
         Resource: arn:aws:s3:::${self:provider.environment.TODO_S3_BUCKET}/*
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
 
-  # TODO: Configure this function
+# uploads attached images to s3 and updates DynamoDB table with url
   GenerateUploadUrl:
     handler: src/lambda/http/generateUploadUrl.handler
     events:
@@ -177,6 +192,9 @@ functions:
           documentation:
             summary: S3 creates presigned URL
             description: S3 creates presigned URL
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
     iamRoleStatements:
       - Effect: "Allow"
         Action:
@@ -192,10 +210,14 @@ functions:
         Action:
           - dynamodb:UpdateItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
 
 resources:
   Resources:
-    # TODO: Add any necessary AWS resources
 
     GatewayResponseDefault4XX:
       Type: AWS::ApiGateway::GatewayResponse
