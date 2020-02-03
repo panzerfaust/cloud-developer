@@ -52,7 +52,7 @@ This should start a development server with the React application that will inte
 
 # TODO items
 
-The application should store TODO items, and each TODO item contains the following fields:
+Each TODO item contains the following fields:
 
 * `todoId` (string) - a unique id for an item
 * `createdAt` (string) - date and time when an item was created
@@ -62,15 +62,13 @@ The application should store TODO items, and each TODO item contains the followi
 * `attachmentUrl` (string) - a URL pointing to an image attached to a TODO item
 * `userId` (string) - Id of authorised person who created TODO item
 
-# Functions to be implemented
-
-To implement this project, you need to implement the following functions and configure them in the `serverless.yml` file:
+# Function Descriptions
 
 * `Auth` - this function implements a custom authorizer for API Gateway using Auth0.
 
 * `GetTodos` - return all TODOs for a current user. A user id can be extracted from a JWT token that is sent by the frontend
 
-It should return data that looks like this:
+It returns data that looks like this:
 
 ```json
 {
@@ -101,7 +99,7 @@ It receives a new TODO item to be created in JSON format that looks like this:
 }
 ```
 
-It should return a new TODO item that looks like this:
+It returns a new TODO item that looks like this:
 
 ```json
 {
@@ -147,12 +145,3 @@ It should return a JSON object that looks like this:
 ```
 
 All functions are already connected to appropriate events from API Gateway.
-
-An id of a user can be extracted from a JWT token passed by a client.
-
-
-
-# Best practices
-
-To complete this exercise, please follow the best practices from the 6th lesson of this course.
-
