@@ -15,6 +15,10 @@ limitations under the License.
 */
 
 provider "azurerm" {
+  subscription_id = "553adfee-190f-4fb5-b074-bda108fcfe66"
+  client_id = "e4d16004-ca0e-4322-996d-cecbd0578149"
+  client_secret = "6f8a89e3-1d80-4c2a-89ff-df7817c7f3e9"
+  tenant_id = "0eb1a377-2b31-466e-b86d-e74fc8fa49dc"
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -96,7 +100,7 @@ resource "azurerm_public_ip" "lbip" {
 }
 
 resource "azurerm_public_ip" "control_plane" {
-  count = 3
+  count = 1
 
   name                = "${var.cluster_name}-cp-${count.index}"
   location            = var.location
@@ -157,7 +161,7 @@ resource "azurerm_lb_probe" "lb_probe" {
 }
 
 resource "azurerm_network_interface" "control_plane" {
-  count = 3
+  count = 2
 
   name                = "${var.cluster_name}-cp-${count.index}"
   location            = var.location
@@ -172,7 +176,7 @@ resource "azurerm_network_interface" "control_plane" {
 }
 
 resource "azurerm_network_interface_backend_address_pool_association" "control_plane" {
-  count = 3
+  count = 2
 
   ip_configuration_name   = "${var.cluster_name}-cp-${count.index}"
   network_interface_id    = element(azurerm_network_interface.control_plane.*.id, count.index)
@@ -180,7 +184,7 @@ resource "azurerm_network_interface_backend_address_pool_association" "control_p
 }
 
 resource "azurerm_virtual_machine" "control_plane" {
-  count = 3
+  count = 2
 
   name                             = "${var.cluster_name}-cp-${count.index}"
   location                         = var.location
