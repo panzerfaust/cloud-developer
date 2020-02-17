@@ -1,0 +1,16 @@
+apiVersion : apps/v1beta1
+kind: Deployment
+metadata:
+  name: frontend 
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: frontend 
+    spec:
+      containers:
+        - name: frontend 
+          image: andrewklazinga.azurecr.io/frontend
+          ports:
+          - containerPort: 80
