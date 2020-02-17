@@ -15,7 +15,7 @@ spec:
         service: backend-feed
     spec:
       containers:
-      - image: andrewklazinga/udacity-c3-restapi-feed
+      - image: lasz/udacity-restapi-feed
         name: backend-feed
         imagePullPolicy: Always  
         resources:
@@ -64,12 +64,12 @@ spec:
         - name: POSTGRESS_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: env-secret
+              name: env-config
               key: POSTGRESS_PASSWORD
         - name: POSTGRESS_USERNAME
           valueFrom:
             secretKeyRef:
-              name: env-secret
+              name: env-config
               key: POSTGRESS_USERNAME      
         volumeMounts:
         - name: aws-secret
