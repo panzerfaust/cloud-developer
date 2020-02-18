@@ -6,6 +6,10 @@ metadata:
   name: backend-feed
 spec:
   replicas: 1
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 25%
   selector:
     matchLabels:
       service: backend-feed
@@ -15,7 +19,8 @@ spec:
         service: backend-feed
     spec:
       containers:
-      - image: andrewklazinga/udacity-c3-restapi-feed
+#      - image: andrewklazinga/udacity-c3-restapi-feed  #used for Docker hub
+      - image: andrewklazinga.azurecr.io/backend-feed   #used for Azure Container Registry
         name: backend-feed
         imagePullPolicy: Always  
         resources:
@@ -24,7 +29,16 @@ spec:
             cpu: "250m"
           limits:
             memory: "1024Mi"
-            cpu: "500m"                  
+            cpu: "500m"
+        ports:
+        - containerPort: 8080  
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1 
         env:
         - name: URL
           valueFrom:

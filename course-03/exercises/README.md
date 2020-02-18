@@ -1,223 +1,125 @@
-# KubeOne
+# Udagram - Instagram clone running on microservices
+Course 3 of the Udacity Cloud Developer Nanodegree
 
-<p align="center"><img src="docs/img/kubeone-logo-text.png" width="700px" /></p>
-<p align="center">
-  <a href="https://godoc.org/github.com/kubermatic/kubeone">
-    <img src="https://godoc.org/github.com/kubermatic/kubeone?status.svg" alt="GoDoc" />
-  </a>
-  <a href="https://goreportcard.com/report/github.com/kubermatic/kubeone">
-    <img src="https://goreportcard.com/badge/github.com/kubermatic/kubeone" alt="Go Report Card" />
-  </a>
-  <a href="https://bestpractices.coreinfrastructure.org/projects/2934"><img src="https://bestpractices.coreinfrastructure.org/projects/2934/badge">
-  </a>
-  <a href="https://aur.archlinux.org/packages/kubeone">
-    <img src="https://img.shields.io/aur/version/kubeone.svg" alt="AUR version" />
-  </a>
-</p>
 
-`kubeone` is a CLI tool and a Go library for installing, managing, and upgrading
-Kubernetes High-Available (HA) clusters. It can be used on any cloud provider,
-on-prem or bare-metal cluster.
+## Project Description
 
-## Project Status
+This project involved taking the monolithic version of the Udagram project (course 2) and breaking it up into the:
 
-As of v0.6.0, KubeOne is in the beta phase. Check out the
-[Backwards Compatibility Policy][6] for more details on
-backwards compatibility, KubeOne versioning, and maturity of each KubeOne
-component.
+* Reverseproxy - port forwarding of the different components
+* Frontend - an ionic client that allows for the graphical interaction of the website
+* Backend user - handles the management of users 
+* Backend feed - handles the management of the feeds images
+* Postgresql database running on AWS RDS
+* Bucket store using AWS S3
 
-Versions earlier than v0.6.0 are considered alpha and it's strongly advised to
-upgrade to the v0.6.0 or newer as soon as possible.
+These microservices where first containerised and deployed locally using docker-compose. Once this was working they were deployed to a kubernetes cluster on a public cloud platform. CI/CD was then added to the system.
 
-## KubeOne in Action
 
-[![KubeOne Demo asciicast](https://asciinema.org/a/244104.svg)](https://asciinema.org/a/244104)
+# System Setup 
 
-## Features
+The system consists of a kubernetes cluster running on Microsoft Azure which connects to AWS for a database and bucket while having CI/CD done by Azure Pipeline.
 
-* Supports Kubernetes 1.13+ High-Available (HA) clusters
-* Uses `kubeadm` to provision clusters
-* Comes with a straightforward and easy to use CLI
-* Choice of Linux distributions between Ubuntu, CentOS and CoreOS
-* Integrates with [Cluster-API][7] and [Kubermatic machine-controller][8] to
-  manage worker nodes
-* Integrates with Terraform for sourcing data about infrastructure and control
-  plane nodes
-* Officially supports AWS, DigitalOcean, GCE, Hetzner, Packet, OpenStack, VMware
-  vSphere and Azure
+## Postgresql
 
-## Installing KubeOne
+This database is setup and running on AWS RDS. The security group needs to be appended for the inbound traffic so that their can be a public connection.
 
-### Downloading a binary from GitHub Releases
+## Bucket 
 
-The recommended way to obtain KubeOne is to grab the
-binary from the [GitHub Releases][9] page. On the
-releases page, find the binary for your operating system
-and architecture and download it or grab the URL and use
-`wget` or `curl` to download the binary.
+A bucket is setup on AWS S3 which allows a public connection.
 
-```bash
-curl -LO https://github.com/kubermatic/kubeone/releases/download/v<version>/kubeone_<version>_linux_amd64.zip
+## Containers 
+
+The containers are builded and pushed manually or from a git push and Azure Pipeline. These containers are stored in Azure Container Registry (ACR).
+
+However, these containers were originally using docker hub and being built and pushed locally using these commands:
+
+sudo docker -t build andrewklazinga/reverseproxy .
+sudo docker push andrewklazinga/reverseproxy
+
+## Docker-compose
+
+This was used to test locally by running multiple containers at the same time. It was run using:
+
+docker-compose up
+
+## secrets & configmap files
+
+These files contain all the credentials that need to be kept secure
+* aws-secret.yaml - login details for AWS encoded in base64
+* env-secret.yaml - login details for postgresql in base64
+* env-configmap.yaml - AWS_BUCKET, AWS_PROFILE, AWS_REGION, JWT_SECRET, POSTGRESS_DATABASE, POSTGRESS_HOST, URL
+
+## Kubernetes setup 
+
+Many platforms were considered for the kubernetes deployment. AWS was very expensive and the free tier did not support it. However, Google Cloud Platform and Microsft Azure gave a credit amount that was able to handle it. After using Terraform on both I realised how resource intensive it was by default and it was using up the credits fast. Therefore, I decided to choose Azure's Kubernetes service (AKS) to deploy the cluster cost effectively.
+
+To learn how to deploy on AKS you can find the tutorial here:
+
+https://docs.microsoft.com/en-us/azure/aks/
+
+
+## Kubernetes deploy
+
+Once the cluster is configured you need to deploy the pods. cd into the folder containing all of the deployment files and first deploy the secret and config files by using these commands:
+
+```kubectl apply -f aws-secret.yaml
+kubectl apply -f env-secret.yaml
+kubectl apply -f env-configmap.yaml
+```
+These contain all of the environmental variables the system needs. This is useful as they aren't hardcoded into a file that could be accidentally put on git, and you can easily change them without having to individually update and redeploy all the containers. There was an issue with the postgresql secrets as they were encoded with base64 which caused an issue. To fix this I change their location to the env-configmap.
+
+Next the pods need to be deployed with the reverseproxy last.
+
+```kubectl apply -f frontend-deployment.yaml
+kubectl apply -f backend-user-deployment.yaml
+kubectl apply -f backend-feed-deployment.yaml
+kubectl apply -f reverseproxy-deployment.yaml
 ```
 
-Extract the binary. On Linux and macOS, you can use `unzip`.
+These pods may not work until you deploy the services:
 
-```bash
-unzip kubeone_0.8.0_linux_amd64.zip
+```kubectl apply -f frontend-service.yaml
+kubectl apply -f backend-user-service.yaml
+kubectl apply -f backend-feed-service.yaml
+kubectl apply -f reverseproxy-service.yaml
 ```
 
-Move the `kubeone` binary to your path, so you can easily
-invoke it from your terminal.
+All of the pods and their replicas should now be functioning correctly. In order to run the SERVICES in two different terminals:
 
-```bash
-sudo mv kubeone /usr/local/bin
-```
+kubectl port-forward service/reverseproxy 8080:8080
+kubectl port-forward service/frontend 8100:8100
 
-### Building KubeOne
+You will find it being published to http://localhost:8100 which can be used for debugging.
 
-The alternative way to install KubeOne is using `go get`.
+If you want the public to view it then you need to use the IP of the loadbalancer from:
 
-```bash
-go get -u github.com/kubermatic/kubeone
-```
+kubectl get all
 
-While running of the master branch is a great way to peak at and test
-the new features before they are released, note that master branch can
-break at any time or may contain bugs. Official releases are considered
-stable and recommended for the production usage.
 
-If you already have KubeOne repository cloned, you can use `make`
-to install it.
+## Continuous Integration - Travis CI
 
-```bash
-make install
-```
+In order to setup Travis CI you need to visit
 
-### Using package managers
+https://www.travis-ci.com/
 
-Support for packages managers is still work in progress and expected
-to be finished for one of the upcoming release. For details about the
-progress follow the [issue #471][17]
+and sign in with your github credentials to link them together. Once that is done you need to create a .travis.yml file in your root directory with the correct settings and git push. From now whenever there is a git push it will automatically trigger Travis CI which will begin running tests according to the settings in the yaml file. This is viewable in the dashboard on the url.
 
-#### Arch Linux
 
-We have a package in the AUR [here](https://aur.archlinux.org/packages/kubeone).
-Use your favorite method to build it on your system, for example by using
-`aurutils`:
-```bash
-aur sync kubeone && pacman -S kubeone
-```
+## Continuous Integration & Continuous Deployment - Azure Pipeline
 
-### Shell completion and generating documentation
+An advantage to using Azure is that they have Azure DevOps which is a platform designed to easily perform CI/CD across its cloud platform. It is integrated with Github and the only change that gets made is that docker hub is replaced with Azure Container Registry (ACR). THe service that will be used is Azure Pipeline which does the majority of the integration and setup for you.
 
-KubeOne comes with commands for generating scripts for the shell
-completion and for the documentation in format of man pages
-and more.
+This is path Azure Pipeline will create:
 
-To activate completions for `bash` (or `zsh`), run or put this command
-into your `.bashrc` file:
+Github -> Build & Push Container -> Stores in Azure Container Registry (ACR) -> Deploys to Azure Kubernetes Service (AKS)
 
-```bash
-. <(kubeone completion bash)
-```
+In order to set it up you just need to click the GUI and follow the prompts when asked such has which repository. It will scan the selected repository and give you the potential options. The one to choose is for Kubenetes which does the path mentioned above. Once selected choose your cluster, the default namespace and a name. This will lead to yaml files being created for Azure Pipeline and will be run when it detects a git push.
 
-To put changes in the effect, source your `.bashrc` file.
+For more detailed documentation you can find it here:
 
-```bash
-source ~/.bashrc
-```
+https://docs.microsoft.com/en-us/azure/devops/pipelines/?view=azure-devops
 
-To generate documentation (man pages for example, more available), run:
+Note: for rolling updates - This information is added to the deployment files in the k8s folder. If you are looking for canary deployment functionality that can now be added directly to the pipeline. More infornation can be found here:
 
-```bash
-kubeone document man -o /tmp/man
-```
-
-## Kubernetes Versions Compatibility
-
-Each KubeOne version is supposed to support and work with a set of Kubernetes
-minor versions. We're targeting to support at least 3 minor Kubernetes versions,
-however for early KubeOne releases we're supporting only one or two minor
-versions.
-
-New KubeOne release will be done for each minor Kubernetes version. Usually, a
-new release is targeted 2-3 weeks after Kubernetes release, depending on number
-of changes needed to support a new version.
-
-Since some Terraform releases introduces incompatibilities to previuos versions,
-only a specific version range is supported with each KubeOne release.
-
-In the following table you can find what are supported Kubernetes and Terraform
-versions for each KubeOne version. KubeOne versions that are crossed out are not
-supported. It's highly recommended to use the latest version whenever possible.
-
-| KubeOne version | 1.16 | 1.15 | 1.14 | 1.13 | Terraform | Supported providers                                                |
-|-----------------|------|------|------|------|-----------|--------------------------------------------------------------------|
-| v0.10.0+        | +    | +    | +    | -    | v0.12+    | AWS, DigitalOcean, GCE, Hetzner, Packet, OpenStack, vSphere, Azure |
-| v0.9.0+         | -    | +    | +    | +    | v0.12+    | AWS, DigitalOcean, GCE, Hetzner, Packet, OpenStack, vSphere, Azure |
-
-## Getting Started
-
-We have a getting started tutorial for each cloud provider we support in our
-[documentation][10]. For example, the following document shows
-[how to get started with KubeOne on AWS][11].
-
-A cluster is created using the `kubeone install` command. It takes a KubeOne configuration file and optionally Terraform state used to source information about the infrastructure. You may also use our [Ansible roles][12] to create the configuration file.
-
-```bash
-kubeone install config.yaml --tfjson tf.json
-```
-
-To learn more about KubeOne configuration, please run `kubeone config print --full`.
-
-For advanced use cases and other features, check the [KubeOne features][13]
-document.
-
-## Getting Involved
-
-We very appreciate contributions! If you want to contribute or have an idea for
-a new feature or improvement, please check out our [contributing guide][2].
-
-If you want to get in touch with us and discuss about improvements and new
-features, please create a new issue on GitHub or connect with us over the
-mailing list or Slack:
-
-* [loodse-dev mailing list][14]
-* [`#kubeone` channel][5] on [Kubernetes Slack][15]
-
-## Reporting Bugs
-
-If you encounter issues, please [create a new issue on GitHub][1] or talk to us
-on the [`#kubeone` Slack channel][5]. When reporting a bug please include the
-following information:
-
-* KubeOne version or Git commit that you're running (`kubeone version`),
-* description of the bug and logs from the relevant `kubeone` command (if
-  applicable),
-* steps to reproduce the issue,
-* expected behavior
-
-If you're reporting a security vulnerability, please follow
-[the process for reporting security issues][16].
-
-## Changelog
-
-See [the list of releases][3] to find out about feature changes.
-
-[1]: https://github.com/kubermatic/KubeOne/issues
-[2]: https://github.com/kubermatic/KubeOne/blob/master/CONTRIBUTING.md
-[3]: https://github.com/kubermatic/KubeOne/releases
-[4]: https://github.com/kubermatic/KubeOne/blob/master/CODE_OF_CONDUCT.md
-[5]: https://kubernetes.slack.com/messages/CNEV2UMT7
-[6]: ./docs/backwards_compatibility_policy.md
-[7]: https://github.com/kubernetes-sigs/cluster-api
-[8]: https://github.com/kubermatic/machine-controller
-[9]: https://github.com/kubermatic/kubeone/releases
-[10]: ./docs
-[12]: https://github.com/kubermatic/kubeone/tree/master/examples/ansible
-[11]: ./docs/quickstart-aws.md
-[13]: https://github.com/kubermatic/kubeone#features
-[14]: https://groups.google.com/forum/#!forum/loodse-dev
-[15]: http://slack.k8s.io/
-[16]: https://github.com/kubermatic/kubeone/blob/master/CONTRIBUTING.md#reporting-a-security-vulnerability
-[17]: https://github.com/kubermatic/kubeone/issues/471
+https://devblogs.microsoft.com/devops/improved-continuous-delivery-capabilities-and-caching-for-azure-pipelines/
