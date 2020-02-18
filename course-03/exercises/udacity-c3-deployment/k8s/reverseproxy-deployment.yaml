@@ -9,13 +9,18 @@ spec:
     matchLabels:
       service: reverseproxy
   replicas: 1
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 25%
   template:
     metadata:
       labels:
         service: reverseproxy
     spec:
       containers:
-      - image: andrewklazinga/reverseproxy
+#      - image: andrewklazinga/reverseproxy             #used for Docker hub
+      - image: andrewklazinga.azurecr.io/backend-user   #used for Azure Container Registry
         name: reverseproxy
         imagePullPolicy: Always          
         resources:
@@ -28,3 +33,12 @@ spec:
         ports:
         - containerPort: 8080
       restartPolicy: Always
+      ports:
+        - containerPort: 8080
+      readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1 

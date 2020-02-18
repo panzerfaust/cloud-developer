@@ -6,6 +6,10 @@ metadata:
   name: backend-user
 spec:
   replicas: 1
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 25%
   selector:
     matchLabels:
       service: backend-user
@@ -15,7 +19,8 @@ spec:
         service: backend-user
     spec:
       containers:
-      - image: andrewklazinga/udacity-c3-restapi-user
+#      - image: andrewklazinga/udacity-c3-restapi-user  #used for Docker hub
+      - image: andrewklazinga.azurecr.io/backend-user   #used for Azure Container Registry
         name: backend-user 
         imagePullPolicy: Always  
         resources:
@@ -24,7 +29,16 @@ spec:
             cpu: "250m"
           limits:
             memory: "1024Mi"
-            cpu: "500m"      
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1 
         env:
         - name: URL
           valueFrom:

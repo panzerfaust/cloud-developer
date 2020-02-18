@@ -6,6 +6,10 @@ metadata:
   name: frontend
 spec:
   replicas: 1
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 25%
   selector:
     matchLabels:
       service: frontend
@@ -16,7 +20,8 @@ spec:
         api: external        
     spec:
       containers:
-      - image: andrewklazinga/udacity-c3-frontend
+#      - image: andrewklazinga/udacity-c3-frontend  #used for Docker hub
+      - image: andrewklazinga.azurecr.io/frontend   #used for Azure Container Registry
         name: frontend
         imagePullPolicy: Always          
         ports:
@@ -29,3 +34,12 @@ spec:
             memory: "1024Mi"
             cpu: "500m"                
       restartPolicy: Always
+      ports:
+        - containerPort: 8080
+      readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1 
