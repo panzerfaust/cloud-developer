@@ -48,12 +48,12 @@ spec:
               key: POSTGRESS_HOST
         - name: POSTGRESS_PASSWORD
           valueFrom:
-            secretKeyRef:
-              name: env-secret
+            configMapKeyRef:
+              name: env-config
               key: POSTGRESS_PASSWORD
         - name: POSTGRESS_USERNAME
           valueFrom:
-            secretKeyRef:
-              name: env-secret
+            configMapKeyRef:
+              name: env-config
               key: POSTGRESS_USERNAME
       restartPolicy: Always

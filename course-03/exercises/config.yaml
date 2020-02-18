@@ -1,10 +1,11 @@
 apiVersion: kubeone.io/v1alpha1
 kind: KubeOneCluster
-name: andy-udacity-cluster
+name: andy-udacity-cluster2
 versions:
   kubernetes: 1.16.1
 cloudProvider:
-  name: 'gce'
-  cloudConfig: |
-    [global]
-    regional = true
+  name: 'aws'
+#  name: 'gce'
+#  cloudConfig: |
+#    [global]
+#    regional = true

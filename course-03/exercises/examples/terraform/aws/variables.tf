@@ -56,7 +56,7 @@ variable "ssh_agent_socket" {
 # Provider specific settings
 
 variable "aws_region" {
-  default     = "us-east-1"
+  default     = "eu-west-1"
   description = "AWS region to speak to"
 }
 
